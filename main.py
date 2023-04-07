@@ -1,5 +1,5 @@
 import os
-import cv2
+#import cv2
 import random
 import numpy as np
 import torch
@@ -24,16 +24,19 @@ def main(mode=None):
 
 
     # init device
+    
     if torch.cuda.is_available():
+        print("Device: GPU")
         config.DEVICE = torch.device("cuda")
         torch.backends.cudnn.benchmark = True   # cudnn auto-tuner
     else:
+        print("Device: CPU")
         config.DEVICE = torch.device("cpu")
 
 
 
     # set cv2 running threads to 1 (prevents deadlocks with pytorch dataloader)
-    cv2.setNumThreads(0)
+    #cv2.setNumThreads(0)
 
 
     # initialize random seed
@@ -74,7 +77,7 @@ def load_config(mode=None):
     """
 
     parser = argparse.ArgumentParser()
-    parser.add_argument('--path', '--checkpoints', type=str, default='./checkpoints', help='model checkpoints path (default: ./checkpoints)')
+    parser.add_argument('--path', '--checkpoints', type=str, default='./check_points', help='model checkpoints path (default: ./check_points)')
     parser.add_argument('--model', type=int, choices=[1, 2, 3, 4], help='1: edge model, 2: inpaint model, 3: edge-inpaint model, 4: joint model')
 
     # test mode
@@ -132,3 +135,4 @@ def load_config(mode=None):
 
 if __name__ == "__main__":
     main()
+    

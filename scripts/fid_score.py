@@ -192,7 +192,7 @@ def _compute_statistics_of_path(path, model, batch_size, dims, cuda):
         path = pathlib.Path(path)
         files = list(path.glob('*.jpg')) + list(path.glob('*.png'))
 
-        imgs = np.array([imread(str(fn)).astype(np.float32) for fn in files])
+        imgs = np.array([imread(str(fn)).astype(float32) for fn in files])
 
         # Bring images to shape (B, 3, H, W)
         imgs = imgs.transpose((0, 3, 1, 2))

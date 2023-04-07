@@ -104,5 +104,6 @@ ENV/
 # custom
 .todo
 results
-checkpoints
+check_points
 datasets
+old_cp

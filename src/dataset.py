@@ -7,7 +7,8 @@ import numpy as np
 import torchvision.transforms.functional as F
 from torch.utils.data import DataLoader
 from PIL import Image
-from scipy.misc import imread
+#from scipy.misc import imread
+from numpy import asarray
 from skimage.feature import canny
 from skimage.color import rgb2gray, gray2rgb
 from .utils import create_mask
@@ -54,7 +55,9 @@ class Dataset(torch.utils.data.Dataset):
         size = self.input_size
 
         # load image
-        img = imread(self.data[index])
+        
+        img = Image.open(self.data[index])
+        img = asarray(img)
 
         # gray to rgb
         if len(img.shape) < 3:
@@ -93,18 +96,19 @@ class Dataset(torch.utils.data.Dataset):
         if self.edge == 1:
             # no edge
             if sigma == -1:
-                return np.zeros(img.shape).astype(np.float)
+                return np.zeros(img.shape).astype(float)
 
             # random sigma
             if sigma == 0:
                 sigma = random.randint(1, 4)
 
-            return canny(img, sigma=sigma, mask=mask).astype(np.float)
+            return canny(img, sigma=sigma, mask=mask).astype(float)
 
         # external
         else:
             imgh, imgw = img.shape[0:2]
-            edge = imread(self.edge_data[index])
+            edge = Image.open(self.edge_data[index])
+            edge = asarray(edge)
             edge = self.resize(edge, imgh, imgw)
 
             # non-max suppression
@@ -137,14 +141,16 @@ class Dataset(torch.utils.data.Dataset):
         # external
         if mask_type == 3:
             mask_index = random.randint(0, len(self.mask_data) - 1)
-            mask = imread(self.mask_data[mask_index])
+            mask = Image.open(self.mask_data[mask_index])
+            mask = asarray(mask)
             mask = self.resize(mask, imgh, imgw)
             mask = (mask > 0).astype(np.uint8) * 255       # threshold due to interpolation
             return mask
 
         # test mode: load mask non random
         if mask_type == 6:
-            mask = imread(self.mask_data[index])
+            mask = Image.open(self.mask_data[index])
+            mask = asarray(mask)
             mask = self.resize(mask, imgh, imgw, centerCrop=False)
             mask = rgb2gray(mask)
             mask = (mask > 0).astype(np.uint8) * 255
@@ -165,14 +171,15 @@ class Dataset(torch.utils.data.Dataset):
             i = (imgw - side) // 2
             img = img[j:j + side, i:i + side, ...]
 
-        img = scipy.misc.imresize(img, [height, width])
+        #img = scipy.misc.imresize(img, [height, width])
+        img = np.array(Image.fromarray(img).resize((height,width)))
 
         return img
 
     def load_flist(self, flist):
         if isinstance(flist, list):
             return flist
-
+        
         # flist: image file path, image directory path, text file flist path
         if isinstance(flist, str):
             if os.path.isdir(flist):

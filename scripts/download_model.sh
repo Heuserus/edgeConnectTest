@@ -1,4 +1,4 @@
-DIR='./checkpoints'
+DIR='./check_points'
 URL='https://drive.google.com/uc?export=download&id=1IrlFQGTpdQYdPeZIEgGUaSFpbYtNpekA'
 
 echo "Downloading pre-trained models..."

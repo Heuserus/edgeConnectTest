@@ -20,8 +20,8 @@ def parse_args():
 
 
 def compare_mae(img_true, img_test):
-    img_true = img_true.astype(np.float32)
-    img_test = img_test.astype(np.float32)
+    img_true = img_true.astype(float32)
+    img_test = img_test.astype(float32)
     return np.sum(np.abs(img_true - img_test)) / np.sum(img_true + img_test)
 
 
@@ -43,8 +43,8 @@ for fn in sorted(files):
     name = basename(str(fn))
     names.append(name)
 
-    img_gt = (imread(str(fn)) / 255.0).astype(np.float32)
-    img_pred = (imread(path_pred + '/' + basename(str(fn))) / 255.0).astype(np.float32)
+    img_gt = (imread(str(fn)) / 255.0).astype(float32)
+    img_pred = (imread(path_pred + '/' + basename(str(fn))) / 255.0).astype(float32)
 
     img_gt = rgb2gray(img_gt)
     img_pred = rgb2gray(img_pred)
