@@ -1,0 +1,1 @@
+python main.py --checkpoints ./check_points/hmaps1

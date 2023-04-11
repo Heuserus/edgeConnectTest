@@ -6,22 +6,44 @@ import random
 import numpy as np
 import torchvision.transforms.functional as F
 from torch.utils.data import DataLoader
-from PIL import Image
+from PIL import Image, ImageOps
 #from scipy.misc import imread
 from numpy import asarray
 from skimage.feature import canny
 from skimage.color import rgb2gray, gray2rgb
 from .utils import create_mask
+import cv2
+
+def autocontrast(img):
+        sizetest = 0
+        smalltest = 65535   
+        for h in range(len(img)):
+            for w in range(len(img[h])):
+                if img[h][w] > sizetest:
+                    sizetest = img[h][w]
+                if img[h][w] < smalltest:
+                    smalltest = img[h][w]
+        for h in range(len(img)):
+            for w in range(len(img[h])):
+                img[h][w] = round(((65535 - 0) / (sizetest - smalltest)) * (img[h][w] - smalltest)/256)
+                if img[h][w] > 255:
+                    img[h][w] = 255
+                if img[h][w] < 0:
+                    img[h][w] = 0
+        return img
 
 
 class Dataset(torch.utils.data.Dataset):
-    def __init__(self, config, flist, edge_flist, mask_flist, augment=True, training=True):
+    def __init__(self, config, flist, edge_flist, mask_flist, contrast_flist, augment=True, training=True):
         super(Dataset, self).__init__()
         self.augment = augment
         self.training = training
         self.data = self.load_flist(flist)
         self.edge_data = self.load_flist(edge_flist)
         self.mask_data = self.load_flist(mask_flist)
+        self.contrast_data = self.load_flist(contrast_flist)
+        print(len(self.contrast_data))
+        
 
         self.input_size = config.INPUT_SIZE
         self.sigma = config.SIGMA
@@ -55,26 +77,31 @@ class Dataset(torch.utils.data.Dataset):
         size = self.input_size
 
         # load image
-        
-        img = Image.open(self.data[index])
-        img = asarray(img)
+        img = Image.open(self.contrast_data[index])
+        #img = cv2.imread(self.data[index],cv2.IMREAD_UNCHANGED)
 
-        # gray to rgb
-        if len(img.shape) < 3:
-            img = gray2rgb(img)
+        img = asarray(img)
+        
+        img_cont = Image.open(self.contrast_data[index])
+        img_cont = asarray(img_cont)
+        
+        #img.setflags(write=True)
+        #img_cont = asarray(Image.fromarray(autocontrast(img).astype(np.uint8)))
+
+        # create grayscale image
+        img_gray = img
 
         # resize/crop if needed
         if size != 0:
             img = self.resize(img, size, size)
 
-        # create grayscale image
-        img_gray = rgb2gray(img)
+        
 
         # load mask
         mask = self.load_mask(img, index)
 
         # load edge
-        edge = self.load_edge(img_gray, index, mask)
+        edge = self.load_edge(img_cont, index, mask)
 
         # augment data
         if self.augment and np.random.binomial(1, 0.5) > 0:
@@ -135,8 +162,9 @@ class Dataset(torch.utils.data.Dataset):
 
         # half
         if mask_type == 2:
+            #TODO: Make Correct Masks
             # randomly choose right or left
-            return create_mask(imgw, imgh, imgw // 2, imgh, 0 if random.random() < 0.5 else imgw // 2, 0)
+            return create_mask(imgw, imgh, imgw // 2, imgh, 0 if random.random() < 0.5 else imgw // 2 , 0)
 
         # external
         if mask_type == 3:
@@ -177,12 +205,15 @@ class Dataset(torch.utils.data.Dataset):
         return img
 
     def load_flist(self, flist):
+        
         if isinstance(flist, list):
             return flist
         
         # flist: image file path, image directory path, text file flist path
         if isinstance(flist, str):
+            
             if os.path.isdir(flist):
+                
                 flist = list(glob.glob(flist + '/*.jpg')) + list(glob.glob(flist + '/*.png'))
                 flist.sort()
                 return flist
@@ -205,3 +236,7 @@ class Dataset(torch.utils.data.Dataset):
 
             for item in sample_loader:
                 yield item
+
+    
+
+        
