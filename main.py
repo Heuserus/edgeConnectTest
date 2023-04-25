@@ -1,5 +1,5 @@
 import os
-#import cv2
+import cv2
 import random
 import numpy as np
 import torch
@@ -36,7 +36,7 @@ def main(mode=None):
 
 
     # set cv2 running threads to 1 (prevents deadlocks with pytorch dataloader)
-    #cv2.setNumThreads(0)
+    cv2.setNumThreads(0)
 
 
     # initialize random seed

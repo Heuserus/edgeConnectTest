@@ -154,10 +154,10 @@ class InpaintingModel(BaseModel):
     def __init__(self, config):
         super(InpaintingModel, self).__init__('InpaintingModel', config)
 
-        # generator input: [rgb(3) + edge(1)]
-        # discriminator input: [rgb(3)]
+        # generator input: [gray(1) + edge(1)]
+        # discriminator input: [gray(1)]
         generator = InpaintGenerator()
-        discriminator = Discriminator(in_channels=3, use_sigmoid=config.GAN_LOSS != 'hinge')
+        discriminator = Discriminator(in_channels=1, use_sigmoid=config.GAN_LOSS != 'hinge')
         if len(config.GPU) > 1:
             generator = nn.DataParallel(generator, config.GPU)
             discriminator = nn.DataParallel(discriminator , config.GPU)
@@ -222,12 +222,12 @@ class InpaintingModel(BaseModel):
         gen_l1_loss = self.l1_loss(outputs, images) * self.config.L1_LOSS_WEIGHT / torch.mean(masks)
         gen_loss += gen_l1_loss
 
-
+        
         # generator perceptual loss
         gen_content_loss = self.perceptual_loss(outputs, images)
         gen_content_loss = gen_content_loss * self.config.CONTENT_LOSS_WEIGHT
         gen_loss += gen_content_loss
-
+        
 
         # generator style loss
         gen_style_loss = self.style_loss(outputs * masks, images * masks)
@@ -249,7 +249,7 @@ class InpaintingModel(BaseModel):
     def forward(self, images, edges, masks):
         images_masked = (images * (1 - masks).float()) + masks
         inputs = torch.cat((images_masked, edges), dim=1)
-        outputs = self.generator(inputs)                                    # in: [rgb(3) + edge(1)]
+        outputs = self.generator(inputs)                                    # in: [gray(1) + edge(1)]
         return outputs
 
     def backward(self, gen_loss=None, dis_loss=None):

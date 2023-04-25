@@ -92,6 +92,11 @@ class PerceptualLoss(nn.Module):
         self.weights = weights
 
     def __call__(self, x, y):
+
+        if x.size()[1] == 1:
+                x = x.expand(-1, 3, -1, -1)
+        if y.size()[1] == 1:
+                y = y.expand(-1, 3, -1, -1)
         # Compute features
         x_vgg, y_vgg = self.vgg(x), self.vgg(y)
 
@@ -111,6 +116,8 @@ class VGG19(torch.nn.Module):
     def __init__(self):
         super(VGG19, self).__init__()
         features = models.vgg19(weights=True).features
+
+        
         self.relu1_1 = torch.nn.Sequential()
         self.relu1_2 = torch.nn.Sequential()
 
@@ -185,6 +192,9 @@ class VGG19(torch.nn.Module):
             param.requires_grad = False
 
     def forward(self, x):
+        if x.size()[1] == 1:
+                x = x.expand(-1, 3, -1, -1)
+        
         relu1_1 = self.relu1_1(x)
         relu1_2 = self.relu1_2(relu1_1)
 

@@ -6,31 +6,29 @@ import random
 import numpy as np
 import torchvision.transforms.functional as F
 from torch.utils.data import DataLoader
-from PIL import Image, ImageOps
+from PIL import Image, ImageOps, ImageEnhance
 #from scipy.misc import imread
 from numpy import asarray
 from skimage.feature import canny
 from skimage.color import rgb2gray, gray2rgb
 from .utils import create_mask
 import cv2
+from skimage import measure
 
-def autocontrast(img):
-        sizetest = 0
-        smalltest = 65535   
-        for h in range(len(img)):
-            for w in range(len(img[h])):
-                if img[h][w] > sizetest:
-                    sizetest = img[h][w]
-                if img[h][w] < smalltest:
-                    smalltest = img[h][w]
-        for h in range(len(img)):
-            for w in range(len(img[h])):
-                img[h][w] = round(((65535 - 0) / (sizetest - smalltest)) * (img[h][w] - smalltest)/256)
-                if img[h][w] > 255:
-                    img[h][w] = 255
-                if img[h][w] < 0:
-                    img[h][w] = 0
-        return img
+def contouredge(img):
+    contour_image = np.zeros_like(img)
+
+    contour_image = np.zeros_like(img,dtype=np.uint8)
+    for contour_interval in range(0,40,1):
+        contours = measure.find_contours(img, contour_interval**2)
+        for contour in contours:
+            contour = np.around(contour).astype(np.int32)
+            contour_image[contour[:, 0], contour[:, 1]] = 255
+    Image.fromarray(contour_image).save("midcontour.png")
+    return contour_image
+
+
+    
 
 
 class Dataset(torch.utils.data.Dataset):
@@ -77,19 +75,13 @@ class Dataset(torch.utils.data.Dataset):
         size = self.input_size
 
         # load image
-        img = Image.open(self.contrast_data[index])
-        #img = cv2.imread(self.data[index],cv2.IMREAD_UNCHANGED)
-
+        img  = cv2.imread(self.data[index], cv2.IMREAD_ANYDEPTH)
+     
         img = asarray(img)
-        
-        img_cont = Image.open(self.contrast_data[index])
-        img_cont = asarray(img_cont)
-        
-        #img.setflags(write=True)
-        #img_cont = asarray(Image.fromarray(autocontrast(img).astype(np.uint8)))
+        img_cont = np.asarray(Image.open(self.contrast_data[index]))
 
         # create grayscale image
-        img_gray = img
+        img_gray = img_cont
 
         # resize/crop if needed
         if size != 0:
@@ -101,7 +93,7 @@ class Dataset(torch.utils.data.Dataset):
         mask = self.load_mask(img, index)
 
         # load edge
-        edge = self.load_edge(img_cont, index, mask)
+        edge = self.load_edge(img, index, mask)
 
         # augment data
         if self.augment and np.random.binomial(1, 0.5) > 0:
@@ -114,6 +106,7 @@ class Dataset(torch.utils.data.Dataset):
 
     def load_edge(self, img, index, mask):
         sigma = self.sigma
+        
 
         # in test mode images are masked (with masked regions),
         # using 'mask' parameter prevents canny to detect edges for the masked regions
@@ -131,6 +124,9 @@ class Dataset(torch.utils.data.Dataset):
 
             return canny(img, sigma=sigma, mask=mask).astype(float)
 
+        if self.edge == 2:
+            
+            return asarray(contouredge(img))
         # external
         else:
             imgh, imgw = img.shape[0:2]
@@ -183,6 +179,31 @@ class Dataset(torch.utils.data.Dataset):
             mask = rgb2gray(mask)
             mask = (mask > 0).astype(np.uint8) * 255
             return mask
+
+        if mask_type == 7:
+            #TODO: Make Correct Masks
+            if random.random() < 0.5: #lines
+                if random.random() < 0.5: #vertical
+                    if random.random() < 0.8: #sides
+                        return create_mask(imgw, imgh, imgw // 4, imgh, 0 if random.random() < 0.5 else (imgw // 4)*3 , 0)
+                    else: #middles
+                        return create_mask(imgw, imgh, imgw // 4, imgh, imgw//4 if random.random() < 0.5 else imgw // 2, 0)
+                else:
+                    if random.random() < 0.8: #sides
+                        return create_mask(imgw, imgh, imgw, imgh // 4, 0, 0 if random.random() < 0.5 else (imgh // 4)*3 )
+                    else: #middles
+                        return create_mask(imgw, imgh, imgw, imgh // 4, 0, imgh//4 if random.random() < 0.5 else imgh // 2)  
+            else: #blocks
+                if random.random() < 0.8:
+                         return create_mask(imgw, imgh, imgw // 2, imgh // 2, 0 if random.random() < 0.5 else imgw // 2 , 0 if random.random() < 0.5 else imgh // 2)
+                else:
+                    if random.random() < 0.5:
+                        if random.random() < 0.5:
+                            return create_mask(imgw, imgh, imgw // 2, imgh // 2, imgw//4 , 0 if random.random() < 0.5 else imgh // 2)
+                        else:
+                            return create_mask(imgw, imgh, imgw // 2, imgh // 2, 0 if random.random() < 0.5 else imgw // 2 , imgh // 4)
+                    else:
+                        return create_mask(imgw, imgh, imgw // 2, imgh // 2, imgw//4 , imgw//4)
 
     def to_tensor(self, img):
         img = Image.fromarray(img)
