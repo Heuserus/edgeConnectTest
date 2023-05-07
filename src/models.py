@@ -4,6 +4,7 @@ import torch.nn as nn
 import torch.optim as optim
 from .networks import InpaintGenerator, EdgeGenerator, Discriminator
 from .loss import AdversarialLoss, PerceptualLoss, StyleLoss
+import math
 
 
 class BaseModel(nn.Module):
@@ -115,6 +116,8 @@ class EdgeModel(BaseModel):
         gen_gan_loss = self.adversarial_loss(gen_fake, True, False)
         gen_loss += gen_gan_loss
 
+        #print("Gan Loss " + str(gen_gan_loss))
+        
 
         # generator feature matching loss
         gen_fm_loss = 0
@@ -123,9 +126,41 @@ class EdgeModel(BaseModel):
         gen_fm_loss = gen_fm_loss * self.config.FM_LOSS_WEIGHT
         gen_loss += gen_fm_loss
 
+        
+
+
+        #print("FM Loss " + str(gen_fm_loss))
+
+        
+
+
+        #experimental sum loss
+        gen_sum_loss = 0
+        if gen_sum_loss == 0:  
+            for i in range(outputs.shape[0]):
+                for j in range(outputs.shape[1]):
+                    outputsum = outputs[i][j].sum().item()
+                    inputsum = edges[i][j].sum().item()
+                    if inputsum != 0:
+                        outputsum_normed = outputsum / inputsum
+                    else:
+                        outputsum_normed = 1
+                    difference = (1-outputsum_normed)
+                    gen_sum_loss += difference
+
+        gen_sum_loss = gen_sum_loss / self.config.BATCH_SIZE
+        gen_sum_loss = gen_sum_loss * self.config.SUM_LOSS_WEIGHT
+        #print("Sum Loss " + str(gen_sum_loss))
+
+        gen_loss += gen_sum_loss
+
+        
+            
+
 
         # create logs
         logs = [
+            ("l_sum", gen_sum_loss),
             ("l_d1", dis_loss.item()),
             ("l_g1", gen_gan_loss.item()),
             ("l_fm", gen_fm_loss.item()),
@@ -188,6 +223,7 @@ class InpaintingModel(BaseModel):
         )
 
     def process(self, images, edges, masks):
+        
         self.iteration += 1
 
         # zero optimizers
@@ -197,6 +233,7 @@ class InpaintingModel(BaseModel):
 
         # process outputs
         outputs = self(images, edges, masks)
+       
         gen_loss = 0
         dis_loss = 0
 

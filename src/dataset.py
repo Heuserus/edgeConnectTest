@@ -19,7 +19,7 @@ def contouredge(img):
     contour_image = np.zeros_like(img)
 
     contour_image = np.zeros_like(img,dtype=np.uint8)
-    for contour_interval in range(0,40,1):
+    for contour_interval in range(12,60,1):
         contours = measure.find_contours(img, contour_interval**2)
         for contour in contours:
             contour = np.around(contour).astype(np.int32)
@@ -76,7 +76,8 @@ class Dataset(torch.utils.data.Dataset):
 
         # load image
         img  = cv2.imread(self.data[index], cv2.IMREAD_ANYDEPTH)
-     
+
+    
         img = asarray(img)
         img_cont = np.asarray(Image.open(self.contrast_data[index]))
 
@@ -102,7 +103,9 @@ class Dataset(torch.utils.data.Dataset):
             edge = edge[:, ::-1, ...]
             mask = mask[:, ::-1, ...]
 
-        return self.to_tensor(img), self.to_tensor(img_gray), self.to_tensor(edge), self.to_tensor(mask)
+            
+
+        return self.to16b_tensor(img), self.to_tensor(img_gray), self.to_tensor(edge), self.to_tensor(mask)
 
     def load_edge(self, img, index, mask):
         sigma = self.sigma
@@ -207,8 +210,19 @@ class Dataset(torch.utils.data.Dataset):
 
     def to_tensor(self, img):
         img = Image.fromarray(img)
+        
         img_t = F.to_tensor(img).float()
+
+               
         return img_t
+
+    def to16b_tensor(self,img):
+        img = Image.fromarray(img)
+        
+        img_t = F.to_tensor(img).float()
+
+                
+        return img_t / 65536.0
 
     def resize(self, img, height, width, centerCrop=True):
         imgh, imgw = img.shape[0:2]

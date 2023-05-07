@@ -5,14 +5,13 @@ import math
 import os
 import random
 
-# Set the path to the folder containing the input images
-folder_path = "datasets/hmaps_train"
+folder_path = "../datasets/hmaps_train"
 
-# Get a list of all the files in the folder
-files = os.listdir(folder_path)
+# Read the file names from random_files.txt
+with open("random_files.txt", "r") as f:
+    random_files = f.read().splitlines()
 
-# Select 100 random files from the list
-random_files = random.sample(files, 100)
+
 
 # Create an empty list to store the contour images
 contour_images = []
@@ -25,7 +24,7 @@ for file in random_files:
 
     # Calculate the contour interval based on the desired height difference
     contour_image = np.zeros_like(heightmap,dtype=np.uint8)
-    for contour_interval in range(0,50,1):
+    for contour_interval in range(12,60,1):
         contours = measure.find_contours(heightmap, contour_interval**2)
         for contour in contours:
             contour = np.around(contour).astype(np.int32)

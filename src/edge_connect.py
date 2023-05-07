@@ -391,12 +391,16 @@ class EdgeConnect():
         if self.config.SAMPLE_SIZE <= 6:
             image_per_row = 1
 
+        print(images)
+        
+        print(outputs)
+
         images = stitch_images(
-            self.postprocess(images),
+            self.postprocess16bit(images),
             self.postprocess(inputs),
             self.postprocess(edges),
-            self.postprocess(outputs),
-            self.postprocess(outputs_merged),
+            self.postprocess16bit(outputs),
+            self.postprocess16bit(outputs_merged),
             img_per_row = image_per_row
         )
 
@@ -417,5 +421,11 @@ class EdgeConnect():
     def postprocess(self, img):
         # [0, 1] => [0, 255]
         img = img * 255.0
+        img = img.permute(0, 2, 3, 1)
+        return img.int()
+
+    def postprocess16bit(self,img):
+
+        img = img * 65536.0
         img = img.permute(0, 2, 3, 1)
         return img.int()
